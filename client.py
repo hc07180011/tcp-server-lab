@@ -1,20 +1,39 @@
 import sys
 import time
-import socket            
- 
-s = socket.socket()        
+import socket
+import multiprocessing
+
+
 port = int(sys.argv[1])
- 
-# connect to the server on local computer
-s.connect(('127.0.0.1', port))
 
-print(s.recv(1024))
 
-for i in range(10):
-    s.send(b"put 70")
-    print(s.recv(1024))
-    s.send(b"get 68")
-    print(s.recv(1024))
-    time.sleep(10000)
+def f(uid: int):
+    s = socket.socket()
+    s.connect(("127.0.0.1", port))
+    print("{:03d} start".format(uid))
 
-s.close()
+    print("{:03d}".format(uid), s.recv(1024))
+
+    s.send(("put {}".format(uid)).encode())
+    print("{:03d}".format(uid), s.recv(1024))
+
+    if uid == 1:
+        s.send(("get 1").encode())
+    else:
+        s.send(("get {}".format(uid - 1)).encode())
+    print("{:03d}".format(uid), s.recv(1024))
+
+    time.sleep(3)
+    s.close()
+    print("{:03d} end".format(uid))
+
+
+if __name__ == "__main__":
+    p = list()
+    for i in range(10):
+        time.sleep(0.1)
+        p.append(multiprocessing.Process(target=f, args=(i + 1,)))
+        p[-1].start()
+
+    for pp in p:
+        pp.join()
