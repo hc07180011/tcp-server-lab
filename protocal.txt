@@ -1,0 +1,22 @@
+## Live status
+
+* Connect
+
+- client --> server, connect
+- server --> client, `ack`
+- server read wait
+
+* Sync
+
+- client --> server, `put [userId]`
+- server --> client, `ack`
+- server read wait
+
+* Query
+
+- client --> server, `get [userId]`
+- server --> client, `on` | `off`
+
+
+---
+

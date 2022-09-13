@@ -1,0 +1,5 @@
+[requires]
+libmysqlclient/8.0.29
+
+[generators]
+cmake
