@@ -15,7 +15,7 @@
 * Query
 
 - client --> server, `get [userId]`
-- server --> client, `on` | `off`
+- server --> client, `1` | `0`
 
 
 ---

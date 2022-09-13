@@ -9,7 +9,7 @@ port = int(sys.argv[1])
 
 def f(uid: int):
     s = socket.socket()
-    s.connect(("127.0.0.1", port))
+    s.connect(("13.114.32.216", port))
     print("{:03d} start".format(uid))
 
     print("{:03d}".format(uid), s.recv(1024))
