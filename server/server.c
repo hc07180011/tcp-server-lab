@@ -161,7 +161,10 @@ int main(int argc, char** argv) {
                             logging(INFO, logging_mes);
                             continue;
                         }
-                        ERR_EXIT("accept");
+                        sprintf(logging_mes, "`accept` error, ERRNO=%d", errno);
+                        logging(ERROR, logging_mes);
+                        continue;
+                        // ERR_EXIT("accept"); <-- don't exit for better stability
                     }
 
                     FD_SET(conn_fd, &rfds);
@@ -182,7 +185,10 @@ int main(int argc, char** argv) {
                     sprintf(logging_mes, "[Send] `%s`", requestP[conn_fd].buf);
                     logging(DEBUG, logging_mes);
                     if (write(requestP[conn_fd].conn_fd, requestP[conn_fd].buf, strlen(requestP[conn_fd].buf)) == -1) {
-                        ERR_EXIT("write");
+                        sprintf(logging_mes, "`write` (%d) error, ERRNO=%d", requestP[conn_fd].conn_fd, errno);
+                        logging(ERROR, logging_mes);
+                        continue;
+                        // ERR_EXIT("write"); <-- It's normal when client resets conn
                     }
                     memset(requestP[conn_fd].buf, 0, sizeof(requestP[conn_fd].buf));
 
@@ -251,7 +257,10 @@ int main(int argc, char** argv) {
                     sprintf(logging_mes, "[Send] `%s`", requestP[conn_fd].buf);
                     logging(DEBUG, logging_mes);
                     if (write(requestP[conn_fd].conn_fd, requestP[conn_fd].buf, strlen(requestP[conn_fd].buf)) == -1) {
-                        ERR_EXIT("write");
+                        sprintf(logging_mes, "`write` (%d) error, ERRNO=%d", requestP[conn_fd].conn_fd, errno);
+                        logging(ERROR, logging_mes);
+                        continue;
+                        // ERR_EXIT("write"); <-- It's normal when client resets conn
                     }
                     memset(requestP[conn_fd].buf, 0, sizeof(requestP[conn_fd].buf));
                 }

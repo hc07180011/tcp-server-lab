@@ -6,6 +6,7 @@ import multiprocessing
 
 import logging
 logger = logging.getLogger()
+logger.addHandler(logging.FileHandler("access.log"))
 logger.setLevel(logging.DEBUG)
 
 
@@ -108,7 +109,7 @@ def f(lock, id):
     for _ in range(global_scale):
         __query(lock, s, id, id + int(random.random() * global_scale), 0)
         time.sleep(random.random())
-        if random.random() ** 10 > 0.1:
+        if random.random() ** 20 > 0.1:
             __logout(lock, s, id, id)
             exit(1)
 

@@ -268,3 +268,4 @@ cython_debug/
 
 .vscode/
 online.db
+status.lock
