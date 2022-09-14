@@ -66,7 +66,7 @@ int handle_read(request* reqP) {
     if (r < 0) {
         sprintf(logging_mes, "`handle_read` error, ERRNO=%d", errno);
         logging(ERROR, logging_mes);
-        ERR_EXIT("fd");
+        // ERR_EXIT("fd"); <-- It's normal when client resets conn
         return -1;
     }
     if (r == 0) {
@@ -192,12 +192,20 @@ int main(int argc, char** argv) {
                     conn_fd = i;
 
                     int ret = handle_read(&requestP[conn_fd]); // parse data from client to requestP[conn_fd].buf
-                    if (ret == 0) {
-                        sprintf(
-                            logging_mes,
-                            "Receive zero-length message, closing socket (fd=%d,uid=%d)...",
-                            conn_fd, requestP[conn_fd].user_id
-                        );
+                    if (ret <= 0) {
+                        if (ret == 0) {
+                            sprintf(
+                                logging_mes,
+                                "Receive zero-length message, closing socket (fd=%d,uid=%d)...",
+                                conn_fd, requestP[conn_fd].user_id
+                            );
+                        } else {
+                            sprintf(
+                                logging_mes,
+                                "bad request from %s (fd=%d|%d,uid=%d)",
+                                requestP[conn_fd].host, conn_fd, requestP[conn_fd].conn_fd, requestP[conn_fd].user_id
+                            );
+                        }
                         logging(INFO, logging_mes);
 
                         /* !!! TODO: Implement offline */
@@ -210,24 +218,10 @@ int main(int argc, char** argv) {
 
                         continue;
                     }
-                    if (ret < 0) {
-                        sprintf(
-                            logging_mes,
-                            "bad request from %s (fd=%d|%d,uid=%d) ",
-                            requestP[conn_fd].host, conn_fd, requestP[conn_fd].conn_fd, requestP[conn_fd].user_id
-                        );
-                        logging(INFO, logging_mes);
-
-                        // already closed, send RST
-                        sprintf(requestP[conn_fd].buf, RST);
-                        write(requestP[conn_fd].conn_fd, requestP[conn_fd].buf, strlen(requestP[conn_fd].buf));
-
-                        continue;
-                    }
 
                     /*** ===== Core logic here ===== ***/
 
-                    printf("Got `%s`\n", requestP[conn_fd].buf);
+                    printf("Got `%s`\n", requeŻtP[conn_fd].buf);
 
                     if (!strncmp(requestP[conn_fd].buf, "put", 3)) {
                         requestP[conn_fd].user_id = atoi(requestP[conn_fd].buf + 4);
