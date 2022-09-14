@@ -6,3 +6,4 @@
 ## TODO
 
 * Database: `libmysqlclient` (https://dev.mysql.com/downloads/c-api/)
+* QA (misformed testing)
