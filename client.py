@@ -30,7 +30,7 @@ def f(uid: int):
 
 if __name__ == "__main__":
     p = list()
-    for i in range(10):
+    for i in range(1000):
         time.sleep(0.1)
         p.append(multiprocessing.Process(target=f, args=(i + 1,)))
         p[-1].start()

@@ -63,7 +63,12 @@ int handle_read(request* reqP) {
     sprintf(logging_mes, "[Recv] %d: `%s`", r, buf);
     logging(DEBUG, logging_mes);
 
-    if (r < 0) return -1;
+    if (r < 0) {
+        sprintf(logging_mes, "`handle_read` error, ERRNO=%d", errno);
+        logging(ERROR, logging_mes);
+        ERR_EXIT("fd");
+        return -1;
+    }
     if (r == 0) {
         return 0; // Closing implemented in main()
     }
@@ -102,6 +107,8 @@ int main(int argc, char** argv) {
     int read_lock_cnt[max_conn_num], write_lock_cnt[max_conn_num];
     memset(read_lock_cnt, 0, sizeof(read_lock_cnt));
     memset(write_lock_cnt, 0, sizeof(write_lock_cnt));
+
+    int db_fd = open("online.db", O_RDWR | O_CREAT, (mode_t)0755);
 
     struct flock fl;
 
@@ -186,11 +193,15 @@ int main(int argc, char** argv) {
 
                     int ret = handle_read(&requestP[conn_fd]); // parse data from client to requestP[conn_fd].buf
                     if (ret == 0) {
-                        sprintf(logging_mes, "Receive zero-length message, closing socket...");
+                        sprintf(
+                            logging_mes,
+                            "Receive zero-length message, closing socket (fd=%d,uid=%d)...",
+                            conn_fd, requestP[conn_fd].user_id
+                        );
                         logging(INFO, logging_mes);
 
                         /* !!! TODO: Implement offline */
-                        put_online_status(requestP[conn_fd].user_id, 0); // update status
+                        put_online_status(db_fd, requestP[conn_fd].user_id, 0); // update status
 
                         // close
                         FD_CLR(conn_fd, &rfds);
@@ -200,8 +211,17 @@ int main(int argc, char** argv) {
                         continue;
                     }
                     if (ret < 0) {
-                        sprintf(logging_mes, "bad request from %s", requestP[conn_fd].host);
+                        sprintf(
+                            logging_mes,
+                            "bad request from %s (fd=%d|%d,uid=%d) ",
+                            requestP[conn_fd].host, conn_fd, requestP[conn_fd].conn_fd, requestP[conn_fd].user_id
+                        );
                         logging(INFO, logging_mes);
+
+                        // already closed, send RST
+                        sprintf(requestP[conn_fd].buf, RST);
+                        write(requestP[conn_fd].conn_fd, requestP[conn_fd].buf, strlen(requestP[conn_fd].buf));
+
                         continue;
                     }
 
@@ -213,7 +233,7 @@ int main(int argc, char** argv) {
                         requestP[conn_fd].user_id = atoi(requestP[conn_fd].buf + 4);
                         printf("user id: %d\n", requestP[conn_fd].user_id);
 
-                        put_online_status(requestP[conn_fd].user_id, 1); // update status
+                        put_online_status(db_fd, requestP[conn_fd].user_id, 1); // update status
 
                         sprintf(requestP[conn_fd].buf, ACK); // dump outputs
 
@@ -221,7 +241,7 @@ int main(int argc, char** argv) {
                         query_uid = atoi(requestP[conn_fd].buf + 4);
                         printf("query uid: %d\n", query_uid);
 
-                        query_result = (int)get_online_status(query_uid); // get status
+                        query_result = (int)get_online_status(db_fd, query_uid); // get status
 
                         sprintf(requestP[conn_fd].buf, "%s %d", ACK, query_result); // dump outputs
 
@@ -255,6 +275,7 @@ static void init_request(request* reqP) {
     reqP->conn_fd = -1;
     reqP->buf_len = 0;
     reqP->id = 0;
+    reqP->user_id = -1;
 }
 
 static void free_request(request* reqP) {
@@ -291,6 +312,12 @@ static void init_server(unsigned short port) {
     }
 
     // Get file descripter table size and initialize request table
+    /*
+    永久设定:
+    修过或在/etc/security/limits.conf添加：
+    * soft nofile 100000
+    * hard nofile 100000
+    */
     maxfd = getdtablesize(); // macOS: 61440
     requestP = (request*) malloc(sizeof(request) * maxfd);
     if (requestP == NULL) {

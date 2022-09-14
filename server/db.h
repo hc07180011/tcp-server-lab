@@ -14,8 +14,7 @@ typedef struct {
     long last_update_ts; // time_t now; time(&now); printf("%ld\n", now);
 } db;
 
-bool get_online_status(int user_id) {
-    int db_fd = open("online.db", O_RDWR | O_CREAT, (mode_t)0755);
+bool get_online_status(int db_fd, int user_id) {
 
     int i, ret;
     db buf;
@@ -38,8 +37,7 @@ bool get_online_status(int user_id) {
     return false; // implicit false (no records)
 }
 
-void put_online_status(int user_id, bool is_online) {
-    int db_fd = open("online.db", O_RDWR | O_CREAT, (mode_t)0755);
+void put_online_status(int db_fd, int user_id, bool is_online) {
 
     int i, ret;
     db buf;
