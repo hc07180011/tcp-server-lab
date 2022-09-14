@@ -54,23 +54,31 @@ def __logout(lock: multiprocessing.Lock, s: socket.socket, id: int, user_id: int
     lock.release()
 
 
-def __query(lock: multiprocessing.Lock, s: socket.socket, id: int, user_id: int) -> None:
+def __query(lock: multiprocessing.Lock, s: socket.socket, id: int, user_id: int, retry_num: int) -> None:
     lock.acquire()
 
     s.sendall(("get {}".format(user_id)).encode())
-    logging.debug("{:08d} --> get {}".format(id, user_id))
+    logging.debug("{:08d} --> get {}{}".format(id, user_id, ("[RETRY {}]".format(retry_num) if retry_num else "")))
 
     buf = s.recv(1024)
-    logging.debug("{:08d} <-- \'{}\'".format(id, buf.decode()))
+    logging.debug("{:08d} <-- \'{}\'{}".format(id, buf.decode(), ("[RETRY {}]".format(retry_num) if retry_num else "")))
 
     is_online_truth = __get_status(user_id)
 
     lock.release()
 
     if is_online_truth:
-        assert buf.decode() == "ack 1"
+        if buf.decode() != "ack 1":
+            if retry_num > 3:
+                raise "{:08d}: get {} shoud be {} but received {}".format(id, user_id, 1, 0)
+            else:
+                __query(lock, s, id, user_id, retry_num + 1)
     else:
-        assert buf.decode() == "ack 0"
+        if buf.decode() != "ack 0":
+            if retry_num > 3:
+                raise "{:08d}: get {} shoud be {} but received {}".format(id, user_id, 0, 1)
+            else:
+                __query(lock, s, id, user_id, retry_num + 1)
 
 
 def f(lock, id):
@@ -98,7 +106,7 @@ def f(lock, id):
         exit(1)
 
     for _ in range(global_scale):
-        __query(lock, s, id, id + int(random.random() * global_scale))
+        __query(lock, s, id, id + int(random.random() * global_scale), 0)
         time.sleep(random.random())
         if random.random() ** 10 > 0.1:
             __logout(lock, s, id, id)
@@ -126,7 +134,7 @@ def test_basic():
     lock = multiprocessing.Lock()
 
     processes = list()
-    for i in range(1024):
+    for i in range(4096):
         processes.append(multiprocessing.Process(target=f, args=(lock, i + 1)))
         processes[-1].start()
         time.sleep(0.1)
