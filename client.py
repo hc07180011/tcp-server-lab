@@ -14,7 +14,7 @@ logger.setLevel(logging.DEBUG)
 
 
 if len(sys.argv) != 2:
-    print("Usage: python3 client.py [port]")
+    print("Usage: python3 client.py [port] (default: 80)")
     exit(1)
 port = int(sys.argv[1])
 
