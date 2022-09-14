@@ -13,6 +13,9 @@ logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
 
+if len(sys.argv) != 2:
+    print("Usage: python3 client.py [port]")
+    exit(1)
 port = int(sys.argv[1])
 
 
