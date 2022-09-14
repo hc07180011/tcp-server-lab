@@ -187,6 +187,12 @@ int main(int argc, char** argv) {
                     if (write(requestP[conn_fd].conn_fd, requestP[conn_fd].buf, strlen(requestP[conn_fd].buf)) == -1) {
                         sprintf(logging_mes, "`write` (%d) error, ERRNO=%d", requestP[conn_fd].conn_fd, errno);
                         logging(ERROR, logging_mes);
+
+                        // close because client has left
+                        FD_CLR(conn_fd, &rfds);
+                        close(requestP[conn_fd].conn_fd);
+                        free_request(&requestP[conn_fd]);
+
                         continue;
                         // ERR_EXIT("write"); <-- It's normal when client resets conn
                     }
@@ -214,8 +220,10 @@ int main(int argc, char** argv) {
                         }
                         logging(INFO, logging_mes);
 
-                        /* !!! TODO: Implement offline */
-                        put_online_status(db_fd, requestP[conn_fd].user_id, 0); // update status
+                        /* !!! TODO: REFINE offline logic and code */
+                        if (requestP[conn_fd].user_id != -1) {
+                            put_online_status(db_fd, requestP[conn_fd].user_id, 0); // update status
+                        }
 
                         // close
                         FD_CLR(conn_fd, &rfds);
@@ -257,10 +265,25 @@ int main(int argc, char** argv) {
                     sprintf(logging_mes, "[Send] `%s`", requestP[conn_fd].buf);
                     logging(DEBUG, logging_mes);
                     if (write(requestP[conn_fd].conn_fd, requestP[conn_fd].buf, strlen(requestP[conn_fd].buf)) == -1) {
-                        sprintf(logging_mes, "`write` (%d) error, ERRNO=%d", requestP[conn_fd].conn_fd, errno);
+                        sprintf(
+                            logging_mes,
+                            "`write` error, ERRNO=%d, client (fd=%d,uid=%d) offline...",
+                            errno, conn_fd, requestP[conn_fd].user_id
+                        );
                         logging(ERROR, logging_mes);
-                        continue;
+
+                        /* !!! TODO: REFINE offline logic and code */
+                        if (requestP[conn_fd].user_id != -1) {
+                            put_online_status(db_fd, requestP[conn_fd].user_id, 0); // update status
+                        }
+
+                        // close
+                        FD_CLR(conn_fd, &rfds);
+                        close(requestP[conn_fd].conn_fd);
+                        free_request(&requestP[conn_fd]);
+
                         // ERR_EXIT("write"); <-- It's normal when client resets conn
+                        continue;
                     }
                     memset(requestP[conn_fd].buf, 0, sizeof(requestP[conn_fd].buf));
                 }
