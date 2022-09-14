@@ -221,7 +221,7 @@ int main(int argc, char** argv) {
 
                     /*** ===== Core logic here ===== ***/
 
-                    printf("Got `%s`\n", requeŻtP[conn_fd].buf);
+                    printf("Got `%s`\n", requestP[conn_fd].buf);
 
                     if (!strncmp(requestP[conn_fd].buf, "put", 3)) {
                         requestP[conn_fd].user_id = atoi(requestP[conn_fd].buf + 4);
