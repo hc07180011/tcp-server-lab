@@ -1,7 +1,7 @@
 # tcp-server-lab
 
 * Format: `protocal.txt`
-* Example: `client.py`
+* Example: `client.py` (`python3 client.py 80`)
 
 ## TODO
 
