@@ -1,39 +1,150 @@
+"""
+IMPORTANT!!
+This client only works on UNIX based machines.
+"""
+
+import os
 import sys
 import time
 import socket
-import multiprocessing
+
+import logging
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
 
 
 port = int(sys.argv[1])
 
 
-def f(uid: int):
+def f1():
     s = socket.socket()
-    s.connect(("13.114.32.216", port))
-    print("{:03d} start".format(uid))
+    s.connect(("live.api.xpacebbs.com", port))
 
-    print("{:03d}".format(uid), s.recv(1024))
+    logger.info("f1 starts")
 
-    s.send(("put {}".format(uid)).encode())
-    print("{:03d}".format(uid), s.recv(1024))
+    buf = s.recv(1024) # initial ack
+    logging.debug("f1 " + "<- " + buf.decode())
 
-    if uid == 1:
-        s.send(("get 1").encode())
-    else:
-        s.send(("get {}".format(uid - 1)).encode())
-    print("{:03d}".format(uid), s.recv(1024))
+    s.send(b"put 1")
+    logging.debug("f1 " + "-> " + "put 1")
+    buf = s.recv(1024) # put ack
+    logging.debug("f1 " + "<- " + buf.decode())
+
+    s.send(b"get 1")
+    logging.debug("f1 " + "-> " + "get 1")
+    buf = s.recv(1024) # query results
+    logging.debug("f1 " + "<- " + buf.decode())
+
+    assert buf.decode() == "ack 1"
+
+    s.send(b"get 2")
+    logging.debug("f1 " + "-> " + "get 2")
+    buf = s.recv(1024) # query results
+    logging.debug("f1 " + "<- " + buf.decode())
+
+    time.sleep(5)
+    s.close()
+
+    logger.info("f1 ends")
+
+    exit(0)
+
+
+def f2():
+    s = socket.socket()
+    s.connect(("live.api.xpacebbs.com", port))
+
+    logger.info("f2 starts")
+
+    buf = s.recv(1024) # initial ack
+    logging.debug("f2 " + "<- " + buf.decode())
+
+    s.send(b"put 2")
+    logging.debug("f2 " + "-> " + "put 2")
+    buf = s.recv(1024) # put ack
+    logging.debug("f2 " + "<- " + buf.decode())
+
+    s.send(b"get 2")
+    logging.debug("f2 " + "-> " + "get 2")
+    buf = s.recv(1024) # query results
+    logging.debug("f2 " + "<- " + buf.decode())
+
+    assert buf.decode() == "ack 1"
+
+    s.send(b"get 1")
+    logging.debug("f2 " + "-> " + "get 1")
+    buf = s.recv(1024) # query results
+    logging.debug("f2 " + "<- " + buf.decode())
+
+    time.sleep(2)
+
+    s.send(b"get 3")
+    logging.debug("f2 " + "-> " + "get 3")
+    buf = s.recv(1024) # query results
+    logging.debug("f2 " + "<- " + buf.decode())
+
+    s.send(b"get 4")
+    logging.debug("f2 " + "-> " + "get 4")
+    buf = s.recv(1024) # query results
+    logging.debug("f2 " + "<- " + buf.decode())
 
     time.sleep(3)
     s.close()
-    print("{:03d} end".format(uid))
+
+    logger.info("f2 ends")
+
+    exit(0)
+
+
+def f3():
+    s = socket.socket()
+    s.connect(("live.api.xpacebbs.com", port))
+
+    logger.info("f3 starts")
+
+    buf = s.recv(1024) # initial ack
+    logging.debug("f3 " + "<- " + buf.decode())
+
+    time.sleep(1)
+
+    s.send(b"put 3")
+    logging.debug("f3 " + "-> " + "put 3")
+    buf = s.recv(1024) # put ack
+    logging.debug("f3 " + "<- " + buf.decode())
+
+    s.send(b"get 3")
+    logging.debug("f3 " + "-> " + "get 3")
+    buf = s.recv(1024) # query results
+    logging.debug("f3 " + "<- " + buf.decode())
+
+    assert buf.decode() == "ack 1"
+
+    s.send(b"get 2")
+    logging.debug("f3 " + "-> " + "get 2")
+    buf = s.recv(1024) # query results
+    logging.debug("f3 " + "<- " + buf.decode())
+
+    # already waited for 1 second, user `2` should be online
+    assert buf.decode() == "ack 1"
+
+    time.sleep(4)
+
+    s.close()
+
+    logger.info("f3 ends")
+
+    exit(0)
 
 
 if __name__ == "__main__":
-    p = list()
-    for i in range(1000):
-        time.sleep(0.1)
-        p.append(multiprocessing.Process(target=f, args=(i + 1,)))
-        p[-1].start()
+    
+    if not os.fork():
+        f1()
 
-    for pp in p:
-        pp.join()
+    if not os.fork():
+        f2()
+
+    if not os.fork():
+        f3()
+
+    os.wait()
