@@ -22,9 +22,9 @@ def __get_status(user_id: int) -> bool:
 def __put_status(user_id: int, is_online: bool) -> None:
     with open("status.lock", "r") as f:
         ids = [int(x) for x in f.read().split("\n") if x != ""]
-    if is_online and user_id not in ids:
+    if is_online and (user_id not in ids):
         ids.append(user_id)
-    elif (not is_online) and user_id in ids:
+    elif (not is_online) and (user_id in ids):
         ids.remove(user_id)
     with open("status.lock", "w") as f:
         f.write("\n".join([str(x) for x in ids]) + "\n")
@@ -80,7 +80,7 @@ def f(lock, id):
     s = socket.socket()
     s.connect((host, port))
 
-    if random.random() ** 5 > 0.1:
+    if random.random() ** 7 > 0.1:
         exit(1)
 
     logger.info("{:08d} starts".format(id))
@@ -88,23 +88,23 @@ def f(lock, id):
     buf = s.recv(1024) # initial ack
     logging.debug("{:08d} <-- {}".format(id, buf.decode()))
 
-    if random.random() ** 5 > 0.1:
+    if random.random() ** 7 > 0.1:
         exit(1)
 
     __login(lock, s, id, id)
 
-    if random.random() ** 5 > 0.1:
+    if random.random() ** 7 > 0.1:
         __logout(lock, s, id, id)
         exit(1)
 
     for _ in range(global_scale):
         __query(lock, s, id, id + int(random.random() * global_scale))
         time.sleep(random.random())
-        if random.random() ** 7 > 0.1:
+        if random.random() ** 10 > 0.1:
             __logout(lock, s, id, id)
             exit(1)
 
-    if random.random() ** 5 > 0.1:
+    if random.random() ** 7 > 0.1:
         __logout(lock, s, id, id)
         exit(1)
 
@@ -117,6 +117,8 @@ def f(lock, id):
 
 
 def test_basic():
+    # !!!!!!!!!!!
+    # currently there r race conditions cause server does not handle it
     if os.path.exists("status.lock"):
         os.remove("status.lock")
     with open("status.lock", "w") as _: pass
